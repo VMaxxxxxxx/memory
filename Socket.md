@@ -64,28 +64,36 @@
 3. 重要结构体
 
    > ```c++
+   > // 统一地址容器，统一接口参数类型
    > struct sockaddr
    > {
-   >     sa_family_t sa_family;	// 地址族
-   >     char	   sa_data[14];	// 占位，具体类型按子类转换
+   >  sa_family_t sa_family;	// 地址族
+   >  char	   sa_data[14];	// 占位，具体类型按子类转换
    > }
    > struct sockaddr_in
    > {
-   >     sa_family_t sin_family;		// AF_INET
-   >     uint16_t 	sun_port;		// 端口
-   >     struct in_addr sin_addr;	// IPv4地址
-   >     unsigned char sin_zero[8];	// 填充，使得sizeof == sockaddr
+   >  sa_family_t sin_family;		// AF_INET：IPV4
+   >  uint16_t 	sun_port;		// 端口：转换网络字节序：htons(8080)
+   >  struct in_addr sin_addr;	// IPv4地址，绑定到本机所有IP地址：INADDR_ANY
+   >  unsigned char sin_zero[8];	// 填充，使得sizeof == sockaddr
    > }
+   > /*
+   > 	bind/accept/connect 等接口的参数是 通用的 struct sockaddr*。
+   > 	你实际用的是 struct sockaddr_in* 或 struct sockaddr_in6*。
+   > 	所以必须强制类型转换：
+   > 	struct sockaddr_in addr;
+   > 	bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
+   > */
    > ```
 
-4. 阻塞、非阻塞、IO多路复用
+4. 阻塞、非阻塞、阻塞IO、非阻塞IO、IO多路复用
 
-   > - 阻塞：accept、recv等会阻塞当前进行直到完成。
-   > - 非阻塞：把fd设置为O_NONBLOCK，系统调用不会阻塞，失败时返回-1并errno=EAGAIN
-   > - IO多路复用用于处理大量fd
-   >   - select，fd数量首先
-   >   - poll，没有fd_set限制，但效率不高
-   >   - epoll，Linux专属，性能高，支持大量并发连接，支持边沿触发和水平触发
+   > - 阻塞、非阻塞：调用IO函数是否会让进程、线程等待，通常用 `fcntl(sockfd, F_SETFL, O_NONBLOCK)` 设置，系统调用不会阻塞，失败时返回-1并errno=EAGAIN
+   > - 阻塞IO、非阻塞IO：内核处理IO的模式，是否挂起进程，内核调用阻塞用户进程或立即返回
+   > - IO多路复用：用于一个进程、线程同时监视多个文件描述符的机制，对应传统阻塞式IO、多线程连接
+   >   - select，使用位图bitmap存储fd状态，fd数量受限
+   >   - poll，使用数组存储fd，内核用链表维护，没有fd_set限制，但需要遍历所有fd，效率不高
+   >   - epoll，内核维护红黑树+就绪链表，Linux专属，只返回有事件的fd，性能高，支持大量并发连接，支持边沿触发和水平触发
 
 5. `IO`多路复用
 
@@ -386,4 +394,12 @@
     > - 前者是通用IO，指从fd读写数据，不支持额外flags
     > - 后者是socket专用，从socket读写数据，可指定flags（MSG_PEEK等）
 
-12. 
+12. 字节序转换
+
+    > 大端：高位字节存储在低地址：0x12345678 → 内存顺序 `[12 34 56 78]`
+    >
+    > 小端：低位字节存储在低地址：0x12345678 → 内存顺序 `[78 56 34 12]`
+    >
+    > - 网络协议规定使用大端序（big-Endian），网络字节序，保证不同cpu架构之间统一的多字节传输标准
+
+13. 

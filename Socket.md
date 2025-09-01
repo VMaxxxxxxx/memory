@@ -230,7 +230,7 @@
    >   >     short events;	// 注册的事件，输入参数
    >   >     short revents;	// 实际发生的事件，由内核填充，输出参数
    >   > }
-   >   > int sscfd = socket(PF_INET, SOCK_STREAM, 0);
+   >   > int sscfd = socket(AF_INET, SOCK_STREAM, 0);
    >   > bind(sscfd, (struct sockaddr*)&address, sizeof(address));
    >   > listen(sscfd, 4);
    >   > struct pollfd fds[4];
@@ -297,8 +297,8 @@
    > - 结构体
    >
    >   - ```c
-   >     struct union epoll_data
-   >     {
+   >     union epoll_data
+   >     {	// 联合体，最大成员大小（考虑对齐），只有一个成员有效
    >         void *ptr;
    >         int fd;
    >         uint32_t u32;
@@ -382,7 +382,7 @@
 
 10. socket是什么
 
-    > - socket是网络通信的断点，是应用层与传输层/网络层的接口，使得不同主机或进程间能够进行数据交换
+    > - socket是网络通信的端点，是应用层与传输层/网络层的接口，使得不同主机或进程间能够进行数据交换
     > - 应用程序通过socket API发送和接收数据，而内核处理TCP/IP协议细节
     > - socket与fd：
     >   - fd是内核对进程打开资源（文件、管道、设备、socket）的抽象，本质是个整数，用来索引内核的文件表
